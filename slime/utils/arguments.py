@@ -605,10 +605,16 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
             )
             return parser
 
-        # wandb
+        # wandb and tensorboard
         def add_wandb_arguments(parser):
             # wandb parameters
             parser.add_argument("--use-wandb", action="store_true", default=False)
+            
+            # tensorboard parameters
+            parser.add_argument("--use-tensorboard", action="store_true", default=False, 
+                              help="Enable tensorboard logging")
+            parser.add_argument("--tensorboard-log-dir", type=str, default=None,
+                              help="Directory to store tensorboard logs. Default is ./runs")
             parser.add_argument(
                 "--wandb-mode",
                 type=str,

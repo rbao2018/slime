@@ -8,6 +8,7 @@ from megatron.core import mpu
 from megatron.core.packed_seq_params import PackedSeqParams
 
 import wandb
+from slime.utils.logger_utils import log_metric
 from slime.utils.flops_utils import calculate_fwd_flops
 from slime.utils.timer import Timer
 
@@ -77,13 +78,13 @@ def gather_log_data(metic_name, args, rollout_id, log_dict):
             f"{metic_name}/{key}": sum([d[key] for d in gathered_log_dict]) / dp_size for key in log_dict
         }
         print(f"{metic_name} {rollout_id}: {reduced_log_dict}")
-        if args.use_wandb:
+        if args.use_wandb or getattr(args, 'use_tensorboard', False):
             reduced_log_dict["rollout/step"] = (
                 rollout_id
                 if not args.wandb_always_use_train_step
                 else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
             )
-            wandb.log(reduced_log_dict)
+            log_metric(reduced_log_dict)
         return reduced_log_dict
     else:
         dist.gather_object(
@@ -249,11 +250,11 @@ def log_perf_data(rollout_id, args):
                 log_dict["perf/wait_time_ratio"] = log_dict["perf/train_wait_time"] / total_time
 
         print(f"perf {rollout_id}: {log_dict}")
-        if args.use_wandb:
+        if args.use_wandb or getattr(args, 'use_tensorboard', False):
             log_dict["rollout/step"] = (
                 rollout_id
                 if not args.wandb_always_use_train_step
                 else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
             )
-            wandb.log(log_dict)
+            log_metric(log_dict)
     timer_instance.reset()

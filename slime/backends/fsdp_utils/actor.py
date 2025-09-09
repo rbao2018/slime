@@ -8,6 +8,7 @@ from torch_memory_saver import torch_memory_saver
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 import wandb
+from slime.utils.logger_utils import log_metric
 from slime.backends.utils.data import process_rollout_data
 from slime.ray.train_actor import TrainRayActor
 from slime.utils.distributed_utils import get_gloo_group
@@ -207,7 +208,7 @@ class FSDPTrainRayActor(TrainRayActor):
             log_dict[f"rollout/{key}"] = (val / len(padded_batches) / world_size).item()
         if dist.get_rank() == 0:
             print(f"rollout {rollout_id}: {log_dict}")
-            if self.args.use_wandb:
+            if self.args.use_wandb or getattr(self.args, 'use_tensorboard', False):
                 log_dict["rollout/step"] = (
                     rollout_id
                     if not self.args.wandb_always_use_train_step
@@ -216,7 +217,7 @@ class FSDPTrainRayActor(TrainRayActor):
                     * self.args.n_samples_per_prompt
                     // self.args.global_batch_size
                 )
-                wandb.log(log_dict)
+                log_metric(log_dict)
 
         reported_accum: dict[str, list[torch.Tensor]] = {}
         self.optimizer.zero_grad(set_to_none=True)
@@ -296,9 +297,9 @@ class FSDPTrainRayActor(TrainRayActor):
                         if "lr" in group:
                             log_dict[f"train/lr-pg_{gid}"] = group["lr"]
                     print(f"step {self.global_step}: {log_dict}")
-                    if self.args.use_wandb:
+                    if self.args.use_wandb or getattr(self.args, 'use_tensorboard', False):
                         log_dict["train/step"] = self.global_step
-                        wandb.log(log_dict)
+                        log_metric(log_dict)
                 self.global_step += 1
 
         Timer().start("train_wait")

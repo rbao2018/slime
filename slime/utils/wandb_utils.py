@@ -1,5 +1,6 @@
 import os
 import wandb
+from slime.utils.logger_utils import init_logger
 
 
 def _is_offline_mode(args) -> bool:
@@ -68,6 +69,13 @@ def init_wandb_primary(args):
     wandb.init(**init_kwargs)
 
     _init_wandb_common()
+    
+    # Initialize unified logger
+    init_logger(
+        use_wandb=args.use_wandb,
+        use_tensorboard=getattr(args, 'use_tensorboard', False),
+        tensorboard_log_dir=getattr(args, 'tensorboard_log_dir', None)
+    )
 
     return wandb.run.id
 
@@ -113,6 +121,13 @@ def init_wandb_secondary(args, wandb_run_id):
     wandb.init(**init_kwargs)
 
     _init_wandb_common()
+    
+    # Initialize unified logger for secondary processes
+    init_logger(
+        use_wandb=args.use_wandb,
+        use_tensorboard=getattr(args, 'use_tensorboard', False),
+        tensorboard_log_dir=getattr(args, 'tensorboard_log_dir', None)
+    )
 
 
 def _init_wandb_common():

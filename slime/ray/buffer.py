@@ -7,6 +7,7 @@ import ray
 import torch
 
 import wandb
+from slime.utils.logger_utils import log_metric
 from slime.ray.rollout_data_source import RolloutDataSourceWithBuffer
 from slime.utils.misc import load_function
 from slime.utils.ray_utils import Box
@@ -179,13 +180,13 @@ def log_eval_data(rollout_id, args, data):
             log_dict[f"eval/{key}-truncated_ratio"] = sum(truncated) / len(truncated)
 
     print(f"eval {rollout_id}: {log_dict}")
-    if args.use_wandb:
+    if args.use_wandb or getattr(args, 'use_tensorboard', False):
         log_dict["eval/step"] = (
             rollout_id
             if not args.wandb_always_use_train_step
             else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
         )
-        wandb.log(log_dict)
+        log_metric(log_dict)
 
 
 def log_rollout_data(rollout_id, args, samples, rollout_time):
@@ -201,10 +202,10 @@ def log_rollout_data(rollout_id, args, samples, rollout_time):
         log_dict["perf/tokens_per_gpu_per_sec"] = sum(response_lengths) / rollout_time / args.rollout_num_gpus
     log_dict["perf/longest_sample_tokens_per_sec"] = max(response_lengths) / rollout_time
     print(f"perf {rollout_id}: {log_dict}")
-    if args.use_wandb:
+    if args.use_wandb or getattr(args, 'use_tensorboard', False):
         log_dict["rollout/step"] = (
             rollout_id
             if not args.wandb_always_use_train_step
             else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
         )
-        wandb.log(log_dict)
+        log_metric(log_dict)
