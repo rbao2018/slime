@@ -2,19 +2,19 @@ import ray
 
 from slime.ray.placement_group import create_actor_group, create_placement_groups, create_rollout_manager
 from slime.utils.arguments import parse_args
-from slime.utils.wandb_utils import init_wandb_primary
+from slime.utils.logging_utils import init_logging
 
 
 def train(args):
     assert not args.colocate, "Colocation is not supported for async training."
     # allocate the GPUs
     pgs = create_placement_groups(args)
-    wandb_run_id = init_wandb_primary(args)
+    wandb_run_id, tensorboard_run_id = init_logging(args)
 
-    actor_model = create_actor_group(args, pgs["actor"], wandb_run_id=wandb_run_id)
+    actor_model = create_actor_group(args, pgs["actor"], wandb_run_id=wandb_run_id, tensorboard_run_id=tensorboard_run_id)
 
     # create the rollout manager, with sglang engines inside.
-    rollout_manager = create_rollout_manager(args, pgs["rollout"], wandb_run_id=wandb_run_id)
+    rollout_manager = create_rollout_manager(args, pgs["rollout"], wandb_run_id=wandb_run_id, tensorboard_run_id=tensorboard_run_id)
 
     assert not args.offload and not args.colocate, "Offload and colocate are not supported for full async RL training."
 

@@ -19,6 +19,7 @@ from megatron.training.training import get_model
 
 import wandb
 from slime.utils.memory_utils import clear_memory
+from slime.utils.logging_utils import log_train_metrics
 
 from .checkpoint import load_checkpoint, save_checkpoint
 from .data import get_batch
@@ -463,9 +464,7 @@ def train(rollout_id, model, optimizer, opt_param_scheduler, data_iterator, num_
             for param_group_id, param_group in enumerate(optimizer.param_groups):
                 log_dict[f"train/lr-pg_{param_group_id}"] = opt_param_scheduler.get_lr(param_group)
 
-            if args.use_wandb:
-                log_dict["train/step"] = accumulated_step_id
-                wandb.log(log_dict)
+            log_train_metrics(rollout_id, step_id, log_dict, args)
 
             if args.ci_test:
                 if step_id == 0 and "train/ppo_kl" in log_dict and "train/pg_clipfrac" in log_dict:
