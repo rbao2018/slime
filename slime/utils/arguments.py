@@ -690,12 +690,6 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                 help="TensorBoard mode: enabled (default) or disabled. Overrides TENSORBOARD_MODE env var.",
             )
             parser.add_argument(
-                "--tensorboard-dir",
-                type=str,
-                default=None,
-                help="Directory to store TensorBoard logs. If not specified, will read from TENSORBOARD_DIR env var or use default structure.",
-            )
-            parser.add_argument(
                 "--tensorboard-project",
                 type=str,
                 default=None,
