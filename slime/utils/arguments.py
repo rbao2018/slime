@@ -678,41 +678,6 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
             parser.add_argument("--wandb-run-id", type=str, default=None)
             return parser
 
-        # tensorboard
-        def add_tensorboard_arguments(parser):
-            # TensorBoard parameters
-            parser.add_argument("--use-tensorboard", action="store_true", default=False)
-            parser.add_argument(
-                "--tensorboard-mode",
-                type=str,
-                default=None,
-                choices=["enabled", "disabled"],
-                help="TensorBoard mode: enabled (default) or disabled. Overrides TENSORBOARD_MODE env var.",
-            )
-            parser.add_argument(
-                "--tensorboard-project",
-                type=str,
-                default=None,
-                help="TensorBoard project name. If not specified, will use wandb-project value or 'slime'.",
-            )
-            parser.add_argument(
-                "--tensorboard-group",
-                type=str,
-                default=None,
-                help="TensorBoard group name. If not specified, will use wandb-group value or 'default'.",
-            )
-            parser.add_argument(
-                "--disable-tensorboard-random-suffix",
-                action="store_false",
-                dest="tensorboard_random_suffix",
-                default=True,
-                help=(
-                    "Whether to add a random suffix to the TensorBoard run name. "
-                    "By default, we will add a random 6 length string with characters to the run name."
-                ),
-            )
-            return parser
-
         # debug
         def add_debug_arguments(parser):
             parser.add_argument(
@@ -899,7 +864,6 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
         parser = add_eval_arguments(parser)
         parser = add_algo_arguments(parser)
         parser = add_wandb_arguments(parser)
-        parser = add_tensorboard_arguments(parser)
         parser = add_debug_arguments(parser)
         parser = add_sglang_arguments(parser)
         parser = add_network_arguments(parser)

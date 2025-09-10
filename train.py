@@ -2,19 +2,19 @@ import ray
 
 from slime.ray.placement_group import create_actor_group, create_placement_groups, create_rollout_manager
 from slime.utils.arguments import parse_args
-from slime.utils.logging_utils import init_logging
+from slime.utils.wandb_utils import init_wandb_primary
 from sglang.srt.constants import GPU_MEMORY_TYPE_KV_CACHE, GPU_MEMORY_TYPE_WEIGHTS
 
 
 def train(args):
     # allocate the GPUs
     pgs = create_placement_groups(args)
-    wandb_run_id, tensorboard_run_id = init_logging(args)
+    wandb_run_id = init_wandb_primary(args)
 
-    actor_model = create_actor_group(args, pgs["actor"], wandb_run_id=wandb_run_id, tensorboard_run_id=tensorboard_run_id)
+    actor_model = create_actor_group(args, pgs["actor"], wandb_run_id=wandb_run_id)
 
     # create the rollout manager, with sglang engines inside.
-    rollout_manager = create_rollout_manager(args, pgs["rollout"], wandb_run_id=wandb_run_id, tensorboard_run_id=tensorboard_run_id)
+    rollout_manager = create_rollout_manager(args, pgs["rollout"], wandb_run_id=wandb_run_id)
 
     # calculate num_rollout from num_epoch
     num_rollout_per_epoch = None

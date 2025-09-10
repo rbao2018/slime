@@ -10,7 +10,6 @@ from megatron.core.utils import get_model_config
 
 import wandb
 from slime.utils.flops_utils import calculate_fwd_flops
-from slime.utils.logging_utils import log_rollout_metrics, log_multi_turn_metrics, log_passrate_metrics, log_perf_metrics
 from slime.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from slime.utils.timer import Timer
 from .cp_utils import get_sum_of_sample_mean, slice_with_cp
@@ -205,7 +204,13 @@ def log_rollout_data(rollout_id, args, rollout_data):
                 if "rollout/entropy" in reduced_log_dict:
                     assert 0 < reduced_log_dict["rollout/entropy"] < 0.5
             print(f"rollout {rollout_id}: {reduced_log_dict}")
-            log_rollout_metrics(rollout_id, reduced_log_dict, args)
+            if args.use_wandb:
+                reduced_log_dict["rollout/step"] = (
+                    rollout_id
+                    if not args.wandb_always_use_train_step
+                    else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
+                )
+                wandb.log(reduced_log_dict)
         else:
             dist.gather_object(
                 log_dict,
@@ -266,7 +271,8 @@ def log_multi_turn_data(rollout_id, args, rollout_data):
                 f"multi_turn/{key}": sum([d[key] for d in gathered_log_dict]) / dp_size for key in log_dict
             }
             print(f"multi_turn {rollout_id}: {reduced_log_dict}")
-            log_multi_turn_metrics(rollout_id, reduced_log_dict, args)
+            if args.use_wandb:
+                wandb.log(reduced_log_dict)
         else:
             dist.gather_object(
                 log_dict,
@@ -328,7 +334,8 @@ def log_passrate(rollout_id, args, rollout_data):
                 f"passrate/{key}": sum([d[key] for d in gathered_log_dict]) / dp_size for key in log_dict
             }
             print(f"passrate {rollout_id}: {reduced_log_dict}")
-            log_passrate_metrics(rollout_id, reduced_log_dict, args)
+            if args.use_wandb:
+                wandb.log(reduced_log_dict)
         else:
             dist.gather_object(
                 log_dict,
@@ -367,5 +374,11 @@ def log_perf_data(rollout_id, args):
                 log_dict["perf/wait_time_ratio"] = log_dict["perf/train_wait_time"] / total_time
 
         print(f"perf {rollout_id}: {log_dict}")
-        log_perf_metrics(rollout_id, log_dict, args)
+        if args.use_wandb:
+            log_dict["rollout/step"] = (
+                rollout_id
+                if not args.wandb_always_use_train_step
+                else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
+            )
+            wandb.log(log_dict)
     timer_instance.reset()

@@ -11,7 +11,7 @@ from slime.utils.misc import load_function
 from slime.utils.types import Sample
 from slime.ray.rollout_data_source import RolloutDataSourceWithBuffer
 from slime.utils.ray_utils import Box
-from slime.utils.logging_utils import init_logging_secondary, log_eval_metrics, log_perf_metrics
+from slime.utils.wandb_utils import init_wandb_secondary
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -21,9 +21,9 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 class RolloutController:
     """The class to run rollout and convert rollout data to training data."""
 
-    def __init__(self, args, wandb_run_id, tensorboard_run_id=None):
+    def __init__(self, args, wandb_run_id):
         self.args = args
-        init_logging_secondary(args, wandb_run_id, tensorboard_run_id)
+        init_wandb_secondary(args, wandb_run_id)
 
         self.data_source = RolloutDataSourceWithBuffer(args)
 
@@ -176,7 +176,13 @@ def log_eval_data(rollout_id, args, data):
             log_dict[f"eval/{key}-truncated_ratio"] = sum(truncated) / len(truncated)
 
     print(f"eval {rollout_id}: {log_dict}")
-    log_eval_metrics(rollout_id, log_dict, args)
+    if args.use_wandb:
+        log_dict["eval/step"] = (
+            rollout_id
+            if not args.wandb_always_use_train_step
+            else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
+        )
+        wandb.log(log_dict)
 
 
 def log_rollout_data(rollout_id, args, samples, rollout_time):
@@ -192,4 +198,10 @@ def log_rollout_data(rollout_id, args, samples, rollout_time):
         log_dict["perf/tokens_per_gpu_per_sec"] = sum(response_lengths) / rollout_time / args.rollout_num_gpus
     log_dict["perf/longest_sample_tokens_per_sec"] = max(response_lengths) / rollout_time
     print(f"perf {rollout_id}: {log_dict}")
-    log_perf_metrics(rollout_id, log_dict, args)
+    if args.use_wandb:
+        log_dict["rollout/step"] = (
+            rollout_id
+            if not args.wandb_always_use_train_step
+            else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
+        )
+        wandb.log(log_dict)
