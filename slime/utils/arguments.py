@@ -308,6 +308,12 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                     "It may be helpful for updating loss mask."
                 ),
             )
+            parser.add_argument(
+                "--rollout-num-process",
+                type=int,
+                default=128,
+                help="Number of processes for rollout",
+            )
             return parser
 
         # data

@@ -171,7 +171,7 @@ def start_rollout(api_base_url: str, args, metadata):
     print(f"metadata: {metadata}")
     finished_groups_instance_id_list = [item for sublist in metadata.values() for item in sublist]
     payload = {
-        "num_process": str(getattr(args, "rollout_num_process", 100)),
+        "num_process": str(getattr(args, "rollout_num_process", 128)),
         "num_epoch": str(args.num_epoch or 3),
         "remote_engine_url": f"http://{args.sglang_router_ip}:{args.sglang_router_port}",
         "remote_buffer_url": args.rollout_buffer_url,
