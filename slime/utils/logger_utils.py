@@ -9,6 +9,7 @@ class UnifiedLogger:
     def __init__(self, args):
         self.use_tensorboard = False if getattr(args, "tensorboard_dir", None) is None else True
         print("UnifiedLogger: use_tensorboard =", self.use_tensorboard, flush=True)
+        self.args = args
         self.writer = None
         
         # Initialize tensorboard if requested
@@ -57,12 +58,12 @@ class UnifiedLogger:
             
             self.writer.flush()
             
-            # # 立即刷新并打印确认信息
-            # if logged_metrics:
-            #     try:
-            #         print(f"TensorBoard: Logged {len(logged_metrics)} metrics at step {step}", flush=True)
-            #     except Exception as e:
-            #         print(f"Warning: Failed to flush tensorboard writer: {e}", flush=True)
+            # 立即刷新并打印确认信息
+            if logged_metrics and getattr(self.args, "tensorboard_log_interval", 0) > 0:
+                try:
+                    print(f"TensorBoard: Logged {len(logged_metrics)} metrics at step {step}", flush=True)
+                except Exception as e:
+                    print(f"Warning: Failed to flush tensorboard writer: {e}", flush=True)
             
     
     def close(self):
