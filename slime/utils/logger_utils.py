@@ -41,6 +41,7 @@ class UnifiedLogger:
         
         # Log to tensorboard
         if self.use_tensorboard and self.writer is not None:
+            logged_metrics = []
             for key, value in metrics.items():
                 # Skip step metrics to avoid duplicate logging
                 if key.endswith('/step'):
@@ -50,8 +51,19 @@ class UnifiedLogger:
                 if isinstance(value, (int, float)):
                     try:
                         self.writer.add_scalar(key, value, step)
+                        logged_metrics.append(f"{key}={value}")
                     except Exception as e:
                         print(f"Warning: Failed to log {key} to tensorboard: {e}", flush=True)
+            
+            self.writer.flush()
+            
+            # # 立即刷新并打印确认信息
+            # if logged_metrics:
+            #     try:
+            #         print(f"TensorBoard: Logged {len(logged_metrics)} metrics at step {step}", flush=True)
+            #     except Exception as e:
+            #         print(f"Warning: Failed to flush tensorboard writer: {e}", flush=True)
+            
     
     def close(self):
         """Close the tensorboard writer if it exists."""
@@ -61,45 +73,17 @@ class UnifiedLogger:
             except Exception as e:
                 print(f"Warning: Failed to close tensorboard writer: {e}", flush=True)
     
-    def __enter__(self):
-        """Context manager entry."""
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit with automatic cleanup."""
-        self.close()
 
-
-# Global logger instance
+# 简化版本，移除锁
 _global_logger: Optional[UnifiedLogger] = None
-_logger_lock = threading.Lock()
-
 
 def init_logger(args):
     """Initialize the global logger instance."""
     global _global_logger
-    with _logger_lock:
-        if _global_logger is None:
-            _global_logger = UnifiedLogger(args=args)
-
+    if _global_logger is None:
+        _global_logger = UnifiedLogger(args=args)
 
 def log_metric(metrics: Dict[str, Any], step: Optional[int] = None):
-    """
-    Log metrics using the global logger instance.
-    
-    Args:
-        metrics: Dictionary of metric names and values
-        step: Optional step number for tensorboard
-    """
-    with _logger_lock:
-        if _global_logger is not None:
-            _global_logger.log_metric(metrics, step)
-
-
-def close_logger():
-    """Close the global logger."""
-    global _global_logger
-    with _logger_lock:
-        if _global_logger is not None:
-            _global_logger.close()
-            _global_logger = None
+    """Log metrics using the global logger instance."""
+    if _global_logger is not None:
+        _global_logger.log_metric(metrics, step)
