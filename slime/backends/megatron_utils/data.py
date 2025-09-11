@@ -9,6 +9,7 @@ from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.core.utils import get_model_config
 
 import wandb
+from slime.utils.logger_utils import log_metric
 from slime.utils.flops_utils import calculate_fwd_flops
 from slime.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from slime.utils.timer import Timer
@@ -211,6 +212,7 @@ def log_rollout_data(rollout_id, args, rollout_data):
                     else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
                 )
                 wandb.log(reduced_log_dict)
+                log_metric(reduced_log_dict)
         else:
             dist.gather_object(
                 log_dict,
@@ -273,6 +275,7 @@ def log_multi_turn_data(rollout_id, args, rollout_data):
             print(f"multi_turn {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
                 wandb.log(reduced_log_dict)
+                log_metric(reduced_log_dict)
         else:
             dist.gather_object(
                 log_dict,
@@ -336,6 +339,7 @@ def log_passrate(rollout_id, args, rollout_data):
             print(f"passrate {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
                 wandb.log(reduced_log_dict)
+                log_metric(reduced_log_dict)
         else:
             dist.gather_object(
                 log_dict,
@@ -381,4 +385,5 @@ def log_perf_data(rollout_id, args):
                 else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
             )
             wandb.log(log_dict)
+            log_metric(log_dict)
     timer_instance.reset()

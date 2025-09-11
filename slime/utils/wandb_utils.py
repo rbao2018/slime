@@ -1,5 +1,6 @@
 import os
 import wandb
+from slime.utils.logger_utils import init_logger
 
 
 def _is_offline_mode(args) -> bool:
@@ -68,6 +69,9 @@ def init_wandb_primary(args):
     wandb.init(**init_kwargs)
 
     _init_wandb_common()
+
+    # Initialize unified logger for primary process
+    init_logger(args)
 
     return wandb.run.id
 

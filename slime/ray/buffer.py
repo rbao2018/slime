@@ -12,6 +12,7 @@ from slime.utils.types import Sample
 from slime.ray.rollout_data_source import RolloutDataSourceWithBuffer
 from slime.utils.ray_utils import Box
 from slime.utils.wandb_utils import init_wandb_secondary
+from slime.utils.logger_utils import log_metric
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -183,6 +184,7 @@ def log_eval_data(rollout_id, args, data):
             else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
         )
         wandb.log(log_dict)
+        log_metric(log_dict)
 
 
 def log_rollout_data(rollout_id, args, samples, rollout_time):
@@ -205,3 +207,4 @@ def log_rollout_data(rollout_id, args, samples, rollout_time):
             else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
         )
         wandb.log(log_dict)
+        log_metric(log_dict)
