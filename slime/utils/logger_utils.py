@@ -47,19 +47,19 @@ class UnifiedLogger:
                 # Skip step metrics to avoid duplicate logging
                 if key.endswith('/step'):
                     continue
-                    
+                
+                logged_metrics.append(f"{key}={value}")    
                 # Handle different metric types
                 if isinstance(value, (int, float)):
                     try:
                         self.writer.add_scalar(key, value, step)
-                        logged_metrics.append(f"{key}={value}")
                     except Exception as e:
                         print(f"Warning: Failed to log {key} to tensorboard: {e}", flush=True)
             
             self.writer.flush()
             
             # 立即刷新并打印确认信息
-            if logged_metrics and getattr(self.args, "tensorboard_log_interval", 0) > 0:
+            if getattr(self.args, "tensorboard_log_interval", 0) > 0:
                 try:
                     print(f"TensorBoard: Logged {len(logged_metrics)} metrics at step {step}", flush=True)
                 except Exception as e:
