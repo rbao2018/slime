@@ -76,15 +76,22 @@ class UnifiedLogger:
     
 
 # 简化版本，移除锁
-_global_logger: Optional[UnifiedLogger] = None
+_global_unified_logger: Optional[UnifiedLogger] = None
 
-def init_logger(args):
+def init_logger_primary(args):
     """Initialize the global logger instance."""
-    global _global_logger
-    if _global_logger is None:
-        _global_logger = UnifiedLogger(args=args)
+    global _global_unified_logger
+    _global_unified_logger = UnifiedLogger(args=args)
+
+def init_logger_secondary(args):
+    """Initialize the global logger instance."""
+    global _global_unified_logger
+    if _global_unified_logger is None:
+        _global_unified_logger = UnifiedLogger(args=args)
 
 def log_metric(metrics: Dict[str, Any], step: Optional[int] = None):
     """Log metrics using the global logger instance."""
-    if _global_logger is not None:
-        _global_logger.log_metric(metrics, step)
+    if _global_unified_logger is not None:
+        _global_unified_logger.log_metric(metrics, step)
+    else:
+        print("Warning: UnifiedLogger is not initialized. Metrics will not be logged.", flush=True)
