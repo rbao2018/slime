@@ -338,6 +338,11 @@ def log_passrate(rollout_id, args, rollout_data):
             }
             print(f"passrate {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
+                reduced_log_dict["passrate/step"] = (
+                    rollout_id
+                    if not args.wandb_always_use_train_step
+                    else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
+                )
                 wandb.log(reduced_log_dict)
                 log_metric(reduced_log_dict)
         else:

@@ -37,6 +37,8 @@ class UnifiedLogger:
                 step = metrics["rollout/step"]
             elif "eval/step" in metrics:
                 step = metrics["eval/step"]
+            elif "passrate/step" in metrics:
+                step = metrics["passrate/step"]
             else:
                 step = 0  # Default step
         
@@ -52,7 +54,7 @@ class UnifiedLogger:
                 # Handle different metric types
                 if isinstance(value, (int, float)):
                     try:
-                        self.writer.add_scalar(key, value, step)
+                        self.writer.add_scalar(key, value, step+1)
                     except Exception as e:
                         print(f"Warning: Failed to log {key} to tensorboard: {e}", flush=True)
             
