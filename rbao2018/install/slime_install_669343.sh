@@ -18,26 +18,30 @@ sed -i 's/export NCCL_DEBUG="INFO"/export NCCL_DEBUG="WARN"/g' /etc/profile.d/po
 
 sudo yum install numactl-libs numactl-devel -y
 
-uv pip install nvitop sglang-router --force-reinstall -i https://pypi.antfin-inc.com/simple
+uv pip install jsonlines nvitop sglang-router --force-reinstall -i https://pypi.antfin-inc.com/simple
+uv pip install "tensorboard==2.16.2" -i https://pypi.antfin-inc.com/simple
+
+# reinstall torch_memory_saver
+pip uninstall torch_memory_saver -y
+CXXFLAGS="-std=c++17" pip install "git+https://github.com/fzyzcjy/torch_memory_saver.git"
 
 # reinstall slime
 pip uninstall slime -y && rm -rf /root/slime
 cd /root && git clone -b "250901" https://github.com/rbao2018/slime.git && pip install /root/slime
-
 
 # reinstall megatron-core with patch
 pip uninstall megatron-core -y && rm -rf /root/Megatron-LM
 cd /root && git clone -b "core_v0.13.1" https://github.com/NVIDIA/Megatron-LM.git
 cp /root/slime/docker/patch/v0.4.10-cu126/megatron.patch /root/Megatron-LM/
 cd /root/Megatron-LM && git apply --3way megatron.patch
-pip install /root/Megatron-LM
+pip install /root/Megatron-LM -i https://pypi.antfin-inc.com/simple
 
 
 # reinstall sglang with patch
 pip uninstall sglang -y && rm -rf /root/sglang
 cd /root && git clone https://github.com/sgl-project/sglang.git
 cd /root/sglang && git fetch --all && git checkout 5c14515feca116ff31c665484d01fd416597341b
-yes | cp -rf /root/slime/rbao2018/pyproject.toml /root/sglang/python 
+yes | cp -rf /root/slime/rbao2018/install/pyproject.toml /root/sglang/python/
 cp /root/slime/docker/patch/v0.4.10-cu126/sglang.patch /root/sglang
 cd /root/sglang && git apply --3way sglang.patch
 # Check for conflicts

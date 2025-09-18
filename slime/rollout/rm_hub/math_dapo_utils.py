@@ -13,8 +13,6 @@
 # limitations under the License.
 # Adapted from https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/utils.py
 
-import requests
-import time
 import re
 import signal
 from typing import Optional
@@ -258,24 +256,34 @@ def verify(
     correct, pred = is_correct_minerva(solution_str, answer)
     return correct, pred
 
+def compute_score(
+    solution_str: str,
+    ground_truth: str,
+    strict_box_verify: bool = False,
+    pause_tokens_index: Optional[list[int]] = None,
+) -> float:
+    """Compute the reward score for a solution.
 
-def request_api_wrapper(data: dict, url: str = "http://localhost:11111/get_reward", result_key: str = "reward", max_retries: int = 3) -> float:
-    """Make API request with retry logic."""
-    headers = {"Content-Type": "application/json"}
-    
-    for _ in range(max_retries):
-        try:
-            response = requests.post(url=url, json=data, headers=headers, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            if result_key not in result:
-                raise KeyError(f"{result_key} not in response")
-            return 1.0 if result[result_key] > 0.5 else 0.0
-        except Exception as e:
-            print(f"API request error: {e}")
-            time.sleep(3)
-    return 0.0
+    Args:
+        solution_str: The solution string
+        ground_truth: The ground truth answer
+        config: Configuration object containing reward model settings
+        pause_tokens_index: Indices of pause tokens
 
-def compute_score(solution_str: str, ground_truth: str):
-    reward = request_api_wrapper({"predictions": solution_str, "answers": ground_truth}, url="http://localhost:11111/get_reward")
-    return reward
+    Returns:
+        Reward score (1.0 for correct, -1.0 for incorrect)
+    """
+    # Limit solution length for efficiency
+    solution_str = solution_str[-300:]  # The longest answer in MATH-500 has 159 characters
+
+    # Verify the solution
+    correct, pred = verify(solution_str, ground_truth, strict_box_verify, pause_tokens_index)
+
+    reward = 1.0 if correct else -1.0
+    acc = correct
+
+    return {
+        "score": reward,
+        "acc": acc,
+        "pred": pred,
+    }

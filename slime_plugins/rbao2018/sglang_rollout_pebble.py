@@ -1,6 +1,8 @@
 import copy
 import asyncio
 from concurrent.futures import as_completed, Future, ThreadPoolExecutor
+
+import time
 import requests
 from pebble import ProcessPool
 from tqdm import tqdm
@@ -13,6 +15,7 @@ from slime.rollout.rm_hub import async_rm, batched_async_rm
 
 __all__ = ["generate_rollout"]
 
+
 def sync_rm_wrapper(args, sample):
     """Synchronous wrapper to run the async_rm function."""
     return asyncio.run(async_rm(args, sample))
@@ -20,6 +23,27 @@ def sync_rm_wrapper(args, sample):
 def batched_sync_rm_wrapper(args, samples):
     """Synchronous wrapper to run the batched_async_rm function."""
     return asyncio.run(batched_async_rm(args, samples))
+
+def request_api_wrapper(data: dict, url: str = "http://localhost:11111/get_reward", result_key: str = "reward", max_retries: int = 3) -> float:
+    """Make API request with retry logic."""
+    # headers = {"Content-Type": "application/json"}
+    
+    for _ in range(max_retries):
+        try:
+            response = requests.post(url=url, json=data, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            if result_key not in result:
+                raise KeyError(f"{result_key} not in response")
+            return 1.0 if result[result_key] > 0.5 else 0.0
+        except Exception as e:
+            print(f"API request error: {e}", flush = True)
+            time.sleep(3)
+    return 0.0
+
+def compute_score(solution_str: str, ground_truth: str, url="http://localhost:11111/get_reward"):    
+    reward = request_api_wrapper({"predictions": solution_str, "answers": ground_truth}, url=url)
+    return reward
 
 class GenerateState(metaclass=SingletonMeta):
     """
@@ -165,6 +189,7 @@ def generate_and_rm_worker(args, sample: Sample, sampling_params: dict, evaluati
         # for multi agent system, the reward of some sample is calculated during generation.
         samples_need_reward = [sample for sample in samples if sample.reward is None]
         rewards = batched_sync_rm_wrapper(args, samples_need_reward)
+        
         # rewards = [0 for sample in samples_need_reward]
         for sample, reward in zip(samples_need_reward, rewards):
             sample.reward = reward
@@ -172,7 +197,7 @@ def generate_and_rm_worker(args, sample: Sample, sampling_params: dict, evaluati
     else:
         if sample.status == Sample.Status.ABORTED:
             return sample
-        sample.reward = sync_rm_wrapper(args, sample)
+        sample.reward = compute_score(sample.response, str(sample.label))
 
     return sample
 
