@@ -1,7 +1,7 @@
 import torch
 from slime.utils.types import Sample
 
-__all__ = ["is_reward_zero_std", "more_than_half_correct"]
+__all__ = ["is_reward_zero_std", "more_than_half_correct", "is_all_correct", "is_all_false", "is_not_valid_group"]
 
 def is_reward_zero_std(args, samples: list[Sample], **kwargs):
     if len(samples) != args.n_samples_per_prompt:
@@ -21,3 +21,22 @@ def more_than_half_correct(args, samples: list[Sample], **kwargs):
     rewards = [sample.get_reward_value(args) for sample in samples]
     positive = sum(r > 0 for r in rewards)
     return positive >= len(samples) // 2
+
+
+def is_all_correct(args, samples: list[Sample], **kwargs):
+    if len(samples) != args.n_samples_per_prompt:
+        return True
+    rewards = [sample.get_reward_value(args) for sample in samples]
+    return all(r > 1 for r in rewards)
+
+
+def is_all_false(args, samples: list[Sample], **kwargs):
+    if len(samples) != args.n_samples_per_prompt:
+        return True
+    rewards = [sample.get_reward_value(args) for sample in samples]
+    return all(r < 1 for r in rewards)
+
+def is_not_valid_group(args, samples: list[Sample], **kwargs):
+    if len(samples) != args.n_samples_per_prompt:
+        return True
+    return False
