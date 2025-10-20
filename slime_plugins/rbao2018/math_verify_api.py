@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import os
 import aiohttp
 
 # from dataclasses import dataclass
@@ -23,44 +24,63 @@ import aiohttp
 #     label: str
 #     prompt: str = ""
 
-async def request_api_wrapper_async(data: dict, url: str = "http://localhost:11111/get_reward", result_key: str = "reward", max_retries: int = 3) -> float:
-    """Make async API request with retry logic."""
-    async with aiohttp.ClientSession() as session:
-        for _ in range(max_retries):
-            try:
-                async with session.post(url=url, json=data, timeout=10) as response:
-                    response.raise_for_status()
-                    result = await response.json()
-                    if result_key not in result:
-                        raise KeyError(f"{result_key} not in response")
-                    return result[result_key]
-            except Exception as e:
-                # print(f"API request error: {e}", flush=True)
-                # await asyncio.sleep(3)
-                continue
-        return 0.0
+DEFAULT_URL = os.environ.get("MATH_VERIFY_URL", "http://localhost:11111/get_reward")
+DEFAULT_RESULT_KEY = os.environ.get("MATH_VERIFY_RESULT_KEY", "reward")
+DEFAULT_TIMEOUT_S = float(os.environ.get("MATH_VERIFY_TIMEOUT", "10"))
+DEFAULT_MAX_RETRIES = int(os.environ.get("MATH_VERIFY_MAX_RETRIES", "3"))
+DEFAULT_CONCURRENCY = int(os.environ.get("MATH_VERIFY_CONCURRENCY", "128"))
+
+
+async def request_api_wrapper_async(
+    data: dict,
+    *,
+    session: aiohttp.ClientSession,
+    url: str,
+    result_key: str = DEFAULT_RESULT_KEY,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+) -> float:
+    """Make async API request with retry logic using provided session."""
+    for _ in range(max_retries):
+        try:
+            async with session.post(url=url, json=data) as response:
+                response.raise_for_status()
+                result = await response.json()
+                if result_key not in result:
+                    raise KeyError(f"{result_key} not in response")
+                return float(result[result_key])
+        except Exception:
+            continue
+    return 0.0
 
 async def compute_score(args, samples, **kwargs):
-    # 处理单个样本的情况
-    if hasattr(samples, 'response'):  # 单个Sample对象
-        sample = samples
-        solution_str = sample.response
-        ground_truth = str(sample.label)
-        return await request_api_wrapper_async(
-            {"predictions": solution_str, "answers": ground_truth}
-        )
-    
-    # 处理批量样本的情况
-    tasks = []
-    for sample in samples:
-        solution_str = sample.response
-        ground_truth = str(sample.label)
-        task = request_api_wrapper_async(
-            {"predictions": solution_str, "answers": ground_truth}
-        )
-        tasks.append(task)
-    
-    return await asyncio.gather(*tasks)
+    # URL/字段与并发设置
+    url = getattr(args, "rm_url", None) or DEFAULT_URL
+    result_key = getattr(args, "reward_key", None) or DEFAULT_RESULT_KEY
+    concurrency = DEFAULT_CONCURRENCY
+    timeout = aiohttp.ClientTimeout(total=DEFAULT_TIMEOUT_S)
+    connector = aiohttp.TCPConnector(limit=concurrency)
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+        async def _score_one(sample):
+            solution_str = sample.response
+            ground_truth = str(sample.label)
+            payload = {"predictions": solution_str, "answers": ground_truth}
+            async with semaphore:
+                return await request_api_wrapper_async(
+                    payload,
+                    session=session,
+                    url=url,
+                    result_key=result_key,
+                )
+
+        # 单个样本
+        if hasattr(samples, 'response'):
+            return await _score_one(samples)
+
+        # 批量样本
+        tasks = [_score_one(sample) for sample in samples]
+        return await asyncio.gather(*tasks)
 
 # async def main():
 #     # 创建测试数据
